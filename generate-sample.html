@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生成示例名单</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', 'Microsoft YaHei', sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .sample-names {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .sample-names div {
+            padding: 8px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .info {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .custom-input {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            font-family: inherit;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 生成示例名单 Excel 文件</h1>
+
+        <h3>选项 1：使用预设示例名单</h3>
+        <div class="sample-names" id="sampleNames"></div>
+        <div class="buttons">
+            <button class="btn btn-primary" onclick="generateSampleExcel()">生成并下载示例 Excel</button>
+        </div>
+
+        <hr style="margin: 40px 0; border: none; border-top: 2px solid #eee;">
+
+        <h3>选项 2：自定义名单</h3>
+        <label for="customNames">输入名单（每行一个名字）：</label>
+        <textarea id="customNames" class="custom-input" placeholder="张三&#10;李四&#10;王五&#10;赵六"></textarea>
+        <div class="buttons">
+            <button class="btn btn-primary" onclick="generateCustomExcel()">生成并下载自定义 Excel</button>
+        </div>
+
+        <div class="info">
+            <strong>使用说明：</strong>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>点击"生成并下载"按钮会自动下载 Excel 文件</li>
+                <li>生成的 Excel 文件可以直接在抽奖系统中使用</li>
+                <li>Excel 文件包含一列名字，符合抽奖系统的要求</li>
+                <li>你也可以自己创建 Excel 文件，只要第一列是姓名即可</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 示例名单
+        const sampleNames = [
+            '张伟', '王芳', '李娜', '刘强', '陈静',
+            '杨洋', '赵敏', '黄磊', '周杰', '吴彦',
+            '徐静', '孙丽', '马超', '朱莉', '胡歌',
+            '郭敬', '林峰', '何炅', '高圆圆', '蔡依林',
+            '范冰冰', '邓超', '谢霆锋', '曾志伟', '郑伊健',
+            '梁朝伟', '刘德华', '周润发', '成龙', '李连杰',
+            '张学友', '郭富城', '黎明', '古天乐', '陈小春',
+            '林志颖', '苏有朋', '吴奇隆', '金城武', '言承旭',
+            '周杰伦', '林俊杰', '王力宏', '陶喆', '潘玮柏',
+            '罗志祥', '萧敬腾', '张信哲', '张宇', '齐秦'
+        ];
+
+        // 显示示例名单
+        function displaySampleNames() {
+            const container = document.getElementById('sampleNames');
+            container.innerHTML = sampleNames.map((name, index) =>
+                `<div>${index + 1}. ${name}</div>`
+            ).join('');
+        }
+
+        // 生成 Excel 文件
+        function generateExcel(names, filename) {
+            // 创建工作表数据
+            const data = [['姓名']]; // 表头
+            names.forEach(name => {
+                data.push([name]);
+            });
+
+            // 创建工作簿
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '参与者名单');
+
+            // 下载文件
+            XLSX.writeFile(wb, filename);
+        }
+
+        // 生成示例 Excel
+        function generateSampleExcel() {
+            generateExcel(sampleNames, '示例名单.xlsx');
+            alert('示例 Excel 文件已生成并下载！');
+        }
+
+        // 生成自定义 Excel
+        function generateCustomExcel() {
+            const textarea = document.getElementById('customNames');
+            const customText = textarea.value.trim();
+
+            if (!customText) {
+                alert('请输入至少一个名字！');
+                return;
+            }
+
+            // 分割并清理名字
+            const names = customText.split('\n')
+                .map(name => name.trim())
+                .filter(name => name.length > 0);
+
+            if (names.length === 0) {
+                alert('请输入有效的名字！');
+                return;
+            }
+
+            if (names.length > 500) {
+                alert('名单人数不能超过 500 人！');
+                return;
+            }
+
+            generateExcel(names, '自定义名单.xlsx');
+            alert(`已生成包含 ${names.length} 个参与者的 Excel 文件！`);
+        }
+
+        // 页面加载时显示示例名单
+        displaySampleNames();
+    </script>
+</body>
+</html>
