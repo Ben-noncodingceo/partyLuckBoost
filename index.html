@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>派对抽奖系统</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', 'Microsoft YaHei', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: background 0.5s ease;
+            overflow-x: hidden;
+        }
+
+        /* 主题背景样式 */
+        body.theme-christmas {
+            background: linear-gradient(135deg, #c94b4b 0%, #4b134f 100%);
+        }
+
+        body.theme-newyear {
+            background: linear-gradient(135deg, #ffd700 0%, #ff6b6b 100%);
+        }
+
+        body.theme-birthday {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+        }
+
+        body.theme-corporate {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        }
+
+        body.theme-spring {
+            background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 名单管理页面 */
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: #764ba2;
+        }
+
+        .upload-area input[type="file"] {
+            display: none;
+        }
+
+        .participant-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .participant-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            transition: background 0.2s ease;
+        }
+
+        .participant-item:hover {
+            background: #f8f9fa;
+        }
+
+        .participant-item.duplicate {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+
+        .participant-name {
+            flex: 1;
+            font-size: 16px;
+        }
+
+        .participant-actions button {
+            margin-left: 5px;
+            padding: 5px 15px;
+            font-size: 14px;
+        }
+
+        .add-participant {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .add-participant input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .warning-badge {
+            background: #ffc107;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        /* 抽奖配置页面 */
+        .config-section {
+            margin-bottom: 30px;
+        }
+
+        .config-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .round-config {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            background: #f8f9fa;
+        }
+
+        .round-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .round-header h4 {
+            color: #667eea;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+        }
+
+        /* 抽奖动画页面 */
+        .lottery-screen {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .lottery-title {
+            color: white;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .name-display {
+            background: white;
+            border-radius: 20px;
+            padding: 60px 40px;
+            margin: 40px auto;
+            max-width: 800px;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .rolling-names {
+            font-size: 3em;
+            font-weight: bold;
+            color: #667eea;
+            min-height: 120px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .rolling-name {
+            animation: rollIn 0.3s ease;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        @keyframes rollIn {
+            from {
+                transform: translateY(-50px) scale(0.5);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .lottery-button {
+            padding: 25px 80px;
+            font-size: 2em;
+            border-radius: 50px;
+            border: none;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(245, 87, 108, 0.4);
+            font-weight: bold;
+            margin-top: 40px;
+        }
+
+        .lottery-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(245, 87, 108, 0.6);
+        }
+
+        .lottery-button.active {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            box-shadow: 0 10px 30px rgba(86, 171, 47, 0.4);
+        }
+
+        .lottery-info {
+            color: white;
+            font-size: 1.2em;
+            margin-top: 20px;
+        }
+
+        /* 结果页面 */
+        .results-container {
+            text-align: center;
+        }
+
+        .congrats {
+            color: white;
+            font-size: 3em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: bounce 1s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .winners-display {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 20px 0;
+        }
+
+        .round-results {
+            margin-bottom: 40px;
+        }
+
+        .round-results h3 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+
+        .winner-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .winner-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            font-size: 1.3em;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            animation: popIn 0.5s ease;
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        /* 主题选择器 */
+        .theme-selector {
+            margin-bottom: 20px;
+        }
+
+        .theme-selector select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .rolling-names {
+                font-size: 2em;
+            }
+
+            .lottery-button {
+                padding: 20px 50px;
+                font-size: 1.5em;
+            }
+
+            .winner-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .action-buttons button {
+                width: 100%;
+            }
+        }
+
+        /* 进度指示器 */
+        .progress-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .progress-step {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .progress-step.active {
+            background: white;
+            color: #667eea;
+        }
+
+        .progress-step.completed {
+            background: rgba(86, 171, 47, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 进度指示器 -->
+        <div class="progress-indicator">
+            <div class="progress-step" data-step="1">1. 名单管理</div>
+            <div class="progress-step" data-step="2">2. 抽奖配置</div>
+            <div class="progress-step" data-step="3">3. 开始抽奖</div>
+            <div class="progress-step" data-step="4">4. 查看结果</div>
+        </div>
+
+        <!-- 第一页：名单管理 -->
+        <div id="page1" class="page active">
+            <div class="header">
+                <h1>🎉 派对抽奖系统</h1>
+                <p>步骤 1：管理参与者名单</p>
+            </div>
+
+            <div class="card">
+                <!-- 主题选择 -->
+                <div class="theme-selector">
+                    <label for="themeSelect"><strong>选择活动主题：</strong></label>
+                    <select id="themeSelect">
+                        <option value="default">默认主题</option>
+                        <option value="christmas">圣诞节</option>
+                        <option value="newyear">新年</option>
+                        <option value="birthday">生日派对</option>
+                        <option value="corporate">公司年会</option>
+                        <option value="spring">春节</option>
+                    </select>
+                </div>
+
+                <h2>上传参与者名单</h2>
+                <div class="upload-area" id="uploadArea">
+                    <input type="file" id="fileInput" accept=".xlsx,.xls">
+                    <div>
+                        <p style="font-size: 3em; margin-bottom: 10px;">📁</p>
+                        <p style="font-size: 1.2em; color: #667eea; font-weight: bold;">点击上传 Excel 文件</p>
+                        <p style="color: #6c757d; margin-top: 10px;">或者手动添加参与者</p>
+                    </div>
+                </div>
+
+                <div class="add-participant">
+                    <input type="text" id="newParticipant" placeholder="输入参与者姓名">
+                    <button class="btn btn-success" id="addBtn">添加</button>
+                </div>
+
+                <div class="participant-list" id="participantList"></div>
+
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalCount">0</div>
+                        <div class="stat-label">总人数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="duplicateCount">0</div>
+                        <div class="stat-label">重名数</div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="nextToConfig" disabled>下一步：配置抽奖</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第二页：抽奖配置 -->
+        <div id="page2" class="page">
+            <div class="header">
+                <h1>🎯 抽奖配置</h1>
+                <p>步骤 2：设置抽奖规则</p>
+            </div>
+
+            <div class="card">
+                <div class="config-section">
+                    <h3>基本设置</h3>
+                    <div class="form-group">
+                        <label for="totalRounds">总共抽奖次数：</label>
+                        <input type="number" id="totalRounds" min="1" max="10" value="3">
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="allowRepeat">
+                        <label for="allowRepeat">允许中奖者参加后续抽奖</label>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>抽奖轮次设置</h3>
+                    <div id="roundsConfig"></div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" id="backToList">上一步</button>
+                    <button class="btn btn-primary" id="startLottery">开始抽奖</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第三页：抽奖动画 -->
+        <div id="page3" class="page">
+            <div class="lottery-screen">
+                <h1 class="lottery-title" id="currentRoundTitle">第 1 轮抽奖</h1>
+
+                <div class="name-display">
+                    <div class="rolling-names" id="rollingNames">
+                        <div>准备开始...</div>
+                    </div>
+                </div>
+
+                <button class="lottery-button" id="lotteryBtn">开始</button>
+
+                <div class="lottery-info" id="lotteryInfo">
+                    <p>本轮奖项：<span id="currentPrizeName">-</span></p>
+                    <p>抽取人数：<span id="currentPrizeCount">-</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第四页：结果展示 -->
+        <div id="page4" class="page">
+            <div class="results-container">
+                <h1 class="congrats">🎊 恭喜获奖！🎊</h1>
+
+                <div class="winners-display" id="winnersDisplay"></div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-success" id="exportResults">导出结果</button>
+                    <button class="btn btn-secondary" id="restartLottery">重新开始</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let participants = [];
+        let lotteryConfig = {
+            totalRounds: 3,
+            allowRepeat: false,
+            rounds: []
+        };
+        let allWinners = [];
+        let currentRound = 0;
+        let isRolling = false;
+        let rollingInterval = null;
+        let availableParticipants = [];
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            updateProgressIndicator(1);
+        });
+
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 主题选择
+            document.getElementById('themeSelect').addEventListener('change', function(e) {
+                const theme = e.target.value;
+                document.body.className = theme !== 'default' ? `theme-${theme}` : '';
+            });
+
+            // 文件上传
+            document.getElementById('uploadArea').addEventListener('click', function() {
+                document.getElementById('fileInput').click();
+            });
+
+            document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+
+            // 添加参与者
+            document.getElementById('addBtn').addEventListener('click', addParticipant);
+            document.getElementById('newParticipant').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addParticipant();
+                }
+            });
+
+            // 导航按钮
+            document.getElementById('nextToConfig').addEventListener('click', () => {
+                showPage(2);
+                generateRoundConfig();
+            });
+
+            document.getElementById('backToList').addEventListener('click', () => showPage(1));
+
+            document.getElementById('startLottery').addEventListener('click', () => {
+                saveLotteryConfig();
+                initializeLottery();
+                showPage(3);
+            });
+
+            // 抽奖按钮
+            document.getElementById('lotteryBtn').addEventListener('click', toggleLottery);
+
+            // 结果页面按钮
+            document.getElementById('exportResults').addEventListener('click', exportResults);
+            document.getElementById('restartLottery').addEventListener('click', restartLottery);
+
+            // 抽奖轮数变化
+            document.getElementById('totalRounds').addEventListener('change', generateRoundConfig);
+        }
+
+        // 文件上传处理
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                    // 提取第一列的所有名字
+                    const names = jsonData
+                        .map(row => row[0])
+                        .filter(name => name && String(name).trim() !== '');
+
+                    if (names.length === 0) {
+                        alert('Excel 文件中没有找到有效的名字！');
+                        return;
+                    }
+
+                    if (names.length > 500) {
+                        alert('参与者人数超过 500 人限制！');
+                        return;
+                    }
+
+                    // 添加到参与者列表
+                    names.forEach(name => {
+                        const trimmedName = String(name).trim();
+                        if (trimmedName && !participants.includes(trimmedName)) {
+                            participants.push(trimmedName);
+                        }
+                    });
+
+                    updateParticipantList();
+                    alert(`成功导入 ${names.length} 个参与者！`);
+                } catch (error) {
+                    alert('读取 Excel 文件失败：' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 添加参与者
+        function addParticipant() {
+            const input = document.getElementById('newParticipant');
+            const name = input.value.trim();
+
+            if (!name) {
+                alert('请输入姓名！');
+                return;
+            }
+
+            if (participants.length >= 500) {
+                alert('参与者人数已达上限（500人）！');
+                return;
+            }
+
+            participants.push(name);
+            input.value = '';
+            updateParticipantList();
+        }
+
+        // 更新参与者列表
+        function updateParticipantList() {
+            const listDiv = document.getElementById('participantList');
+            const duplicates = findDuplicates();
+
+            listDiv.innerHTML = '';
+
+            participants.forEach((name, index) => {
+                const item = document.createElement('div');
+                item.className = 'participant-item';
+
+                if (duplicates[name] && duplicates[name] > 1) {
+                    item.classList.add('duplicate');
+                }
+
+                item.innerHTML = `
+                    <span class="participant-name">
+                        ${name}
+                        ${duplicates[name] > 1 ? '<span class="warning-badge">重名 ×' + duplicates[name] + '</span>' : ''}
+                    </span>
+                    <div class="participant-actions">
+                        <button class="btn btn-secondary" onclick="editParticipant(${index})">修改</button>
+                        <button class="btn btn-danger" onclick="deleteParticipant(${index})">删除</button>
+                    </div>
+                `;
+
+                listDiv.appendChild(item);
+            });
+
+            // 更新统计
+            document.getElementById('totalCount').textContent = participants.length;
+            document.getElementById('duplicateCount').textContent = Object.values(duplicates).filter(count => count > 1).length;
+
+            // 启用/禁用下一步按钮
+            document.getElementById('nextToConfig').disabled = participants.length === 0;
+        }
+
+        // 查找重名
+        function findDuplicates() {
+            const counts = {};
+            participants.forEach(name => {
+                counts[name] = (counts[name] || 0) + 1;
+            });
+            return counts;
+        }
+
+        // 编辑参与者
+        function editParticipant(index) {
+            const newName = prompt('修改姓名：', participants[index]);
+            if (newName && newName.trim()) {
+                participants[index] = newName.trim();
+                updateParticipantList();
+            }
+        }
+
+        // 删除参与者
+        function deleteParticipant(index) {
+            if (confirm('确定要删除 "' + participants[index] + '" 吗？')) {
+                participants.splice(index, 1);
+                updateParticipantList();
+            }
+        }
+
+        // 生成抽奖轮次配置
+        function generateRoundConfig() {
+            const totalRounds = parseInt(document.getElementById('totalRounds').value) || 1;
+            const container = document.getElementById('roundsConfig');
+            container.innerHTML = '';
+
+            for (let i = 0; i < totalRounds; i++) {
+                const roundDiv = document.createElement('div');
+                roundDiv.className = 'round-config';
+                roundDiv.innerHTML = `
+                    <div class="round-header">
+                        <h4>第 ${i + 1} 轮</h4>
+                    </div>
+                    <div class="form-group">
+                        <label>奖项名称：</label>
+                        <input type="text" class="prize-name" value="第${i + 1}轮奖项">
+                    </div>
+                    <div class="form-group">
+                        <label>获奖人数：</label>
+                        <input type="number" class="prize-count" min="1" value="1">
+                    </div>
+                `;
+                container.appendChild(roundDiv);
+            }
+        }
+
+        // 保存抽奖配置
+        function saveLotteryConfig() {
+            lotteryConfig.totalRounds = parseInt(document.getElementById('totalRounds').value);
+            lotteryConfig.allowRepeat = document.getElementById('allowRepeat').checked;
+            lotteryConfig.rounds = [];
+
+            const rounds = document.querySelectorAll('.round-config');
+            rounds.forEach((round, index) => {
+                const name = round.querySelector('.prize-name').value;
+                const count = parseInt(round.querySelector('.prize-count').value);
+                lotteryConfig.rounds.push({ name, count });
+            });
+        }
+
+        // 初始化抽奖
+        function initializeLottery() {
+            currentRound = 0;
+            allWinners = [];
+            availableParticipants = [...participants];
+            updateLotteryDisplay();
+        }
+
+        // 更新抽奖显示
+        function updateLotteryDisplay() {
+            const round = lotteryConfig.rounds[currentRound];
+            document.getElementById('currentRoundTitle').textContent = `第 ${currentRound + 1} 轮抽奖`;
+            document.getElementById('currentPrizeName').textContent = round.name;
+            document.getElementById('currentPrizeCount').textContent = round.count;
+            document.getElementById('lotteryBtn').textContent = '开始';
+            document.getElementById('rollingNames').innerHTML = '<div>准备开始...</div>';
+        }
+
+        // 切换抽奖状态
+        function toggleLottery() {
+            if (isRolling) {
+                stopLottery();
+            } else {
+                startLottery();
+            }
+        }
+
+        // 开始抽奖
+        function startLottery() {
+            const round = lotteryConfig.rounds[currentRound];
+
+            if (availableParticipants.length < round.count) {
+                alert('可用参与者人数不足！');
+                return;
+            }
+
+            isRolling = true;
+            document.getElementById('lotteryBtn').textContent = '停止';
+            document.getElementById('lotteryBtn').classList.add('active');
+
+            // 开始滚动动画
+            rollingInterval = setInterval(() => {
+                const displayDiv = document.getElementById('rollingNames');
+                displayDiv.innerHTML = '';
+
+                // 随机显示名字
+                for (let i = 0; i < round.count; i++) {
+                    const randomIndex = Math.floor(Math.random() * availableParticipants.length);
+                    const nameDiv = document.createElement('div');
+                    nameDiv.className = 'rolling-name';
+                    nameDiv.textContent = availableParticipants[randomIndex];
+                    displayDiv.appendChild(nameDiv);
+                }
+            }, 100);
+
+            // 设置最短时间（1秒）后才能停止
+            setTimeout(() => {
+                document.getElementById('lotteryBtn').style.pointerEvents = 'auto';
+            }, 1000);
+
+            // 最长时间（1分钟）后自动停止
+            setTimeout(() => {
+                if (isRolling) {
+                    stopLottery();
+                }
+            }, 60000);
+        }
+
+        // 停止抽奖
+        function stopLottery() {
+            clearInterval(rollingInterval);
+            isRolling = false;
+
+            const round = lotteryConfig.rounds[currentRound];
+            const winners = [];
+
+            // 随机选择获奖者
+            for (let i = 0; i < round.count; i++) {
+                if (availableParticipants.length === 0) break;
+
+                const randomIndex = Math.floor(Math.random() * availableParticipants.length);
+                const winner = availableParticipants[randomIndex];
+                winners.push(winner);
+
+                // 如果不允许重复中奖，从可用列表中移除
+                if (!lotteryConfig.allowRepeat) {
+                    availableParticipants.splice(randomIndex, 1);
+                }
+            }
+
+            // 显示获奖者
+            const displayDiv = document.getElementById('rollingNames');
+            displayDiv.innerHTML = '';
+            winners.forEach(winner => {
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'rolling-name';
+                nameDiv.textContent = winner;
+                displayDiv.appendChild(nameDiv);
+            });
+
+            // 保存获奖者
+            allWinners.push({
+                round: currentRound + 1,
+                prizeName: round.name,
+                winners: winners
+            });
+
+            document.getElementById('lotteryBtn').classList.remove('active');
+
+            // 检查是否还有下一轮
+            if (currentRound < lotteryConfig.totalRounds - 1) {
+                setTimeout(() => {
+                    if (confirm('本轮抽奖完成！是否继续下一轮？')) {
+                        currentRound++;
+                        updateLotteryDisplay();
+                    } else {
+                        showResults();
+                    }
+                }, 2000);
+            } else {
+                setTimeout(() => {
+                    alert('所有抽奖完成！');
+                    showResults();
+                }, 2000);
+            }
+        }
+
+        // 显示结果
+        function showResults() {
+            const container = document.getElementById('winnersDisplay');
+            container.innerHTML = '';
+
+            allWinners.forEach(roundResult => {
+                const roundDiv = document.createElement('div');
+                roundDiv.className = 'round-results';
+
+                let winnersHTML = '';
+                roundResult.winners.forEach((winner, index) => {
+                    winnersHTML += `<div class="winner-card" style="animation-delay: ${index * 0.1}s">${winner}</div>`;
+                });
+
+                roundDiv.innerHTML = `
+                    <h3>${roundResult.prizeName}</h3>
+                    <div class="winner-grid">
+                        ${winnersHTML}
+                    </div>
+                `;
+
+                container.appendChild(roundDiv);
+            });
+
+            showPage(4);
+        }
+
+        // 导出结果
+        function exportResults() {
+            let text = '🎉 抽奖结果 🎉\n\n';
+            allWinners.forEach(roundResult => {
+                text += `${roundResult.prizeName}\n`;
+                text += '获奖者：' + roundResult.winners.join('、') + '\n\n';
+            });
+
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '抽奖结果.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // 重新开始
+        function restartLottery() {
+            if (confirm('确定要重新开始吗？所有数据将被清空！')) {
+                participants = [];
+                allWinners = [];
+                currentRound = 0;
+                updateParticipantList();
+                showPage(1);
+            }
+        }
+
+        // 显示页面
+        function showPage(pageNumber) {
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById('page' + pageNumber).classList.add('active');
+            updateProgressIndicator(pageNumber);
+        }
+
+        // 更新进度指示器
+        function updateProgressIndicator(currentStep) {
+            document.querySelectorAll('.progress-step').forEach((step, index) => {
+                const stepNumber = index + 1;
+                step.classList.remove('active', 'completed');
+
+                if (stepNumber === currentStep) {
+                    step.classList.add('active');
+                } else if (stepNumber < currentStep) {
+                    step.classList.add('completed');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
